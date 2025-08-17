@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="PT-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Kahoot FAK</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      color: #333;
+    }
+    .quiz-box {
+      max-width: 600px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    .question { font-size: 22px; margin-bottom: 15px; }
+    .btn {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      background: #2196f3;
+      color: white;
+      transition: 0.3s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .correct { background: #4caf50 !important; }
+    .wrong { background: #f44336 !important; }
+    #podio { margin-top: 20px; }
+    .rank {
+      padding: 10px;
+      margin: 5px auto;
+      border-radius: 8px;
+      background: #eee;
+      width: 80%;
+    }
+    .rank:nth-child(1) { background: gold; font-weight: bold; }
+    .rank:nth-child(2) { background: silver; }
+    .rank:nth-child(3) { background: #cd7f32; color: white; }
+  </style>
+</head>
+<body>
+  <div class="quiz-box">
+    <div id="start-screen">
+      <h1 style="color:#ff3c6f; font-size:2.2em; margin-bottom:10px;">Bem-vindo ao Kahoot FAK!</h1>
+      <p style="font-size:1.2em; margin-bottom:20px;">Aqui teremos perguntas voltadas para a temática espírita, gostaria de testar seus conhecimentos ?</p>
+      <p style ="font-size:1.2em; margin-bottom:20px;">Digite seu nome e clique para começar!</p>
+      <input type="text" id="username-input" placeholder="Seu nome" style="padding:10px; font-size:1em; border-radius:8px; border:2px solid #2196f3; margin-bottom:15px; width:80%; max-width:300px;">
+      <br>
+      <button class="btn" onclick="startGame()">Começar</button>
+    </div>
+    <h2 id="player" style="display:none;"></h2>
+    <div id="quiz-screen" style="display:none;">
+      <div id="question" class="question"></div>
+      <div id="answers"></div>
+      <button id="next-btn" class="btn" style="display:none;">Próxima</button>
+    </div>
+    <div id="result-screen" style="display:none;">
+      <h2>Fim do Quiz!</h2>
+      <div id="podio"></div>
+      <button class="btn" onclick="location.href='index.html'">Voltar</button>
+    </div>
+  </div>
+
+  <script>
+    // Exemplo fixo de perguntas (ou pode carregar do localStorage se quiser)
+    const questions = [
+      { question: "Quem é o autor de O Livro dos Espíritos?", 
+        answers: [ 
+          { text: "Chico Xavier", correct: false }, 
+          { text: "Allan Kardec", correct: true }, 
+          { text: "Bezerra de Menezes", correct: false }, 
+          { text: "Divaldo Franco", correct: false } 
+        ] 
+      },
+      { question: "Em que ano foi publicado O Livro dos Espíritos?", 
+        answers: [ 
+          { text: "1857", correct: true }, 
+          { text: "1900", correct: false }, 
+          { text: "1800", correct: false }, 
+          { text: "1888", correct: false } 
+        ] 
+      }
+    ];
+
+    let username = localStorage.getItem("username") || "";
+    if (username) {
+      document.getElementById("player").innerText = "Jogador: " + username;
+    }
+
+    const questionElement = document.getElementById("question");
+    const answersElement = document.getElementById("answers");
+    const nextBtn = document.getElementById("next-btn");
+    const podioElement = document.getElementById("podio");
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    function startGame() {
+      const input = document.getElementById("username-input");
+      username = input.value.trim();
+      if (!username) {
+        alert("Por favor, digite seu nome para começar o quiz.");
+        input.focus();
+        return;
+      }
+      localStorage.setItem("username", username);
+      document.getElementById("player").innerText = "Jogador: " + username;
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("quiz-screen").style.display = "block";
+      document.getElementById("player").style.display = "block";
+      showQuestion();
+    }
+
+    function showQuestion() {
+      resetState();
+      let q = questions[currentQuestionIndex];
+      questionElement.innerText = q.question;
+
+      q.answers.forEach(a => {
+        const btn = document.createElement("button");
+        btn.innerText = a.text;
+        btn.classList.add("btn");
+        btn.addEventListener("click", () => selectAnswer(a, btn));
+        answersElement.appendChild(btn);
+      });
+    }
+
+    function resetState() {
+      nextBtn.style.display = "none";
+      answersElement.innerHTML = "";
+    }
+
+    function selectAnswer(answer, btn) {
+      const allBtns = answersElement.querySelectorAll("button");
+      if (answer.correct) {
+        btn.classList.add("correct");
+        score++;
+      } else {
+        btn.classList.add("wrong");
+      }
+      allBtns.forEach(b => b.disabled = true);
+      nextBtn.style.display = "block";
+    }
+
+    nextBtn.addEventListener("click", () => {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < questions.length) {
+        showQuestion();
+      } else {
+        endGame();
+      }
+    });
+
+    function endGame() {
+      document.getElementById("quiz-screen").style.display = "none";
+      document.getElementById("result-screen").style.display = "block";
+
+      // Recupera ranking do localStorage
+      let ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
+      ranking.push({ name: username, score: score });
+      ranking.sort((a, b) => b.score - a.score);
+
+      localStorage.setItem("ranking", JSON.stringify(ranking));
+
+      podioElement.innerHTML = "<h3>🏆 Pódio</h3>";
+      ranking.slice(0, 3).forEach((p, i) => {
+        podioElement.innerHTML += `<div class=\"rank\">${i+1}º - ${p.name} (${p.score} pts)</div>`;
+      });
+    }
+  </script>
+</body>
+</html>
